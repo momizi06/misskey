@@ -165,6 +165,13 @@ export const meta = {
 					type: 'string',
 				},
 			},
+			blockedRemoteCustomEmojis: {
+				type: 'array',
+				optional: false, nullable: false,
+				items: {
+					type: 'string',
+				},
+			},
 			sensitiveWords: {
 				type: 'array',
 				optional: false, nullable: false,
@@ -434,6 +441,11 @@ export const meta = {
 				type: 'string',
 				optional: false, nullable: true,
 			},
+			dimensions: {
+				type: 'number',
+				optional: false, nullable: false,
+				minimum: 1,
+			},
 			disableRegistration: {
 				type: 'boolean',
 				optional: false, nullable: false,
@@ -575,6 +587,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				uri: this.config.url,
 				description: instance.description,
 				langs: instance.langs,
+				dimensions: instance.dimensions,
 				tosUrl: instance.termsOfServiceUrl,
 				repositoryUrl: instance.repositoryUrl,
 				feedbackUrl: instance.feedbackUrl,
@@ -614,6 +627,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				pinnedUsers: instance.pinnedUsers,
 				hiddenTags: instance.hiddenTags,
 				blockedHosts: instance.blockedHosts,
+				blockedRemoteCustomEmojis: instance.blockedRemoteCustomEmojis,
 				silencedHosts: instance.silencedHosts,
 				sensitiveMediaHosts: instance.sensitiveMediaHosts,
 				sensitiveWords: instance.sensitiveWords,

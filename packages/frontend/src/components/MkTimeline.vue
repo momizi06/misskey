@@ -29,7 +29,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 			>
 				<template v-for="(note, i) in (notes as Misskey.entities.Note[])" :key="note.id">
 					<div
-						v-if="note._shouldInsertAd_" :class="[$style.noteWithAd, { '_gaps': !noGap }]"
+						v-if="note['_shouldInsertGapMarker_']"
+						:class="[$style.gapMarker, $style.note, { '_gaps': !noGap }]"
+						:data-scroll-anchor="note.id"
+					>
+						<span aria-hidden="true">⋮</span>
+					</div>
+					<div
+						v-else-if="note['_shouldInsertAd_']" :class="[$style.noteWithAd, { '_gaps': !noGap }]"
 						:data-scroll-anchor="note.id"
 					>
 						<MkNote :class="$style.note" :note="note" :withHardMute="true"/>
@@ -63,6 +70,7 @@ import MkPagination from '@/components/MkPagination.vue';
 import { i18n } from '@/i18n.js';
 import { infoImageUrl } from '@/instance.js';
 import { generateClientTransactionId } from '@/utility/misskey-api.js';
+import { retryWithFibonacciBackoff } from '@/utility/retry.js';
 
 const props = withDefaults(defineProps<{
 	src: TimelinePageSrc | AllTimelineType;
@@ -70,6 +78,7 @@ const props = withDefaults(defineProps<{
 	antenna?: string;
 	channel?: string;
 	role?: string;
+	dimension?: number;
 	sound?: boolean;
 	withRenotes?: boolean;
 	withReplies?: boolean;
@@ -89,6 +98,7 @@ const emit = defineEmits<{
 
 provide('inTimeline', true);
 provide('tl_withSensitive', computed(() => props.withSensitive));
+provide('tl_dimension', computed(() => props.dimension ?? prefer.r.dimension.value));
 provide('inChannel', computed(() => props.src === 'channel'));
 
 type TimelineQueryType = {
@@ -99,7 +109,8 @@ type TimelineQueryType = {
 	visibility?: string,
 	listId?: string,
 	channelId?: string,
-	roleId?: string
+	roleId?: string,
+	dimension?: number
 };
 
 const prComponent = useTemplateRef('prComponent');
@@ -108,20 +119,53 @@ const pagingComponent = useTemplateRef('pagingComponent');
 let tlNotesCount = 0;
 const notVisibleNoteData = new Array<object>();
 
+const pendingNoteFetches = new Map<string, Promise<void>>();
+
+const fetchNoteJson = async (id: string) => {
+	const res = await window.fetch(`/notes/${id}.json`, {
+		method: 'GET',
+		credentials: 'include',
+		headers: {
+			'Authorization': 'anonymous',
+			'X-Client-Transaction-Id': generateClientTransactionId('misskey'),
+		},
+	});
+	if (!res.ok) {
+		throw new Error(`Failed to fetch note: ${res.status}`);
+	}
+	return res.json();
+};
+
+const scheduleMinimizedNoteRetry = (data: { id: string }) => {
+	if (pendingNoteFetches.has(data.id)) return;
+
+	const retryPromise = retryWithFibonacciBackoff(() => fetchNoteJson(data.id), {
+		maxAttempts: 3,
+		initialDelayMs: 100,
+	}).then((noteData) => {
+		void prepend(deepMerge(data, noteData));
+	}).catch((error) => {
+		console.error('Failed to fetch minimized note after retries:', data.id, error);
+	}).finally(() => {
+		pendingNoteFetches.delete(data.id);
+	});
+
+	pendingNoteFetches.set(data.id, retryPromise);
+};
+
 async function fulfillNoteData(data) {
 	// チェックするプロパティはなんでも良い
 	// minimizeが有効でid以外が存在しない場合は取得する
 	if (!data.visibility) {
-		const res = await window.fetch(`/notes/${data.id}.json`, {
-			method: 'GET',
-			credentials: 'omit',
-			headers: {
-				'Authorization': 'anonymous',
-				'X-Client-Transaction-Id': generateClientTransactionId('misskey'),
-			},
-		});
-		if (!res.ok) return null;
-		return deepMerge(data, await res.json());
+		if (pendingNoteFetches.has(data.id)) return null;
+
+		try {
+			const noteData = await fetchNoteJson(data.id);
+			return deepMerge(data, noteData);
+		} catch {
+			scheduleMinimizedNoteRetry(data);
+			return null;
+		}
 	}
 
 	return data;
@@ -169,11 +213,23 @@ async function loadUnloadedNotes() {
 		notVisibleNoteData.length = 0;
 
 		const notes = await Promise.allSettled(items.map(fulfillNoteData));
-		if (items.length >= 10) pagingComponent.value.deleteItem();
+		const fulfilledNotes = notes
+			.filter((i): i is PromiseFulfilledResult<object> => i.status === 'fulfilled' && i.value != null)
+			.map(i => i.value);
+		if (fulfilledNotes.length === 0) return;
 
-		for (const note of notes.filter(i => i.status === 'fulfilled' && i.value != null)) {
-			await prepend((note as PromiseFulfilledResult<object>).value);
+		if (items.length >= 10) {
+			if (pagingComponent.value.isHead?.() ?? true) {
+				pagingComponent.value.deleteItem();
+			} else {
+				pagingComponent.value.prepend({
+					id: `gap-marker-${Date.now()}`,
+					_shouldInsertGapMarker_: true,
+				} as never);
+			}
 		}
+
+		for (const note of fulfilledNotes) await prepend(note);
 	} finally {
 		pagingComponent.value.startFetch();
 	}
@@ -183,10 +239,10 @@ let connection: Misskey.IChannelConnection<any> | null = null;
 let connection2: Misskey.IChannelConnection<any> | null = null;
 let paginationQuery: Paging | null = null;
 const noGap = !prefer.s.showGapBetweenNotesInTimeline;
-
 const stream = useStream();
 
 function connectChannel() {
+	const dimension = props.dimension ?? prefer.r.dimension.value;
 	if (props.src === 'antenna') {
 		if (props.antenna == null) return;
 		connection = stream.useChannel('antenna', {
@@ -198,6 +254,7 @@ function connectChannel() {
 			withRenotes: props.withRenotes,
 			withFiles: props.onlyFiles ? true : undefined,
 			minimize: true,
+			dimension: dimension,
 		});
 		connection2 = stream.useChannel('main');
 	} else if (props.src === 'local') {
@@ -206,6 +263,7 @@ function connectChannel() {
 			withReplies: props.withReplies,
 			withFiles: props.onlyFiles ? true : undefined,
 			minimize: true,
+			dimension: dimension,
 		});
 	} else if (props.src === 'media') {
 		connection = stream.useChannel('hybridTimeline', {
@@ -213,6 +271,7 @@ function connectChannel() {
 			withReplies: props.withReplies,
 			withFiles: true,
 			minimize: true,
+			dimension: dimension,
 		});
 	} else if (props.src === 'social') {
 		connection = stream.useChannel('hybridTimeline', {
@@ -220,12 +279,14 @@ function connectChannel() {
 			withReplies: props.withReplies,
 			withFiles: props.onlyFiles ? true : undefined,
 			minimize: true,
+			dimension: dimension,
 		});
 	} else if (props.src === 'global') {
 		connection = stream.useChannel('globalTimeline', {
 			withRenotes: props.withRenotes,
 			withFiles: props.onlyFiles ? true : undefined,
 			minimize: true,
+			dimension: dimension,
 		});
 	} else if (props.src === 'mentions') {
 		connection = stream.useChannel('main');
@@ -251,12 +312,14 @@ function connectChannel() {
 		connection = stream.useChannel('channel', {
 			channelId: props.channel,
 			minimize: true,
+			dimension: dimension,
 		});
 	} else if (props.src === 'role') {
 		if (props.role == null) return;
 		connection = stream.useChannel('roleTimeline', {
 			roleId: props.role,
 			minimize: true,
+			dimension: dimension,
 		});
 	}
 	if (props.src !== 'directs' && props.src !== 'mentions') connection?.on('note', prepend);
@@ -270,6 +333,7 @@ function disconnectChannel() {
 function updatePaginationQuery() {
 	let endpoint: keyof Misskey.Endpoints | null;
 	let query: TimelineQueryType | null;
+	const dimension = props.dimension ?? prefer.r.dimension.value;
 
 	if (props.src === 'antenna') {
 		endpoint = 'antennas/notes';
@@ -281,6 +345,7 @@ function updatePaginationQuery() {
 		query = {
 			withRenotes: props.withRenotes,
 			withFiles: props.onlyFiles ? true : undefined,
+			dimension: dimension,
 		};
 	} else if (props.src === 'local') {
 		endpoint = 'notes/local-timeline';
@@ -288,6 +353,7 @@ function updatePaginationQuery() {
 			withRenotes: props.withRenotes,
 			withReplies: props.withReplies,
 			withFiles: props.onlyFiles ? true : undefined,
+			dimension: dimension,
 		};
 	} else if (props.src === 'media') {
 		endpoint = 'notes/hybrid-timeline';
@@ -295,6 +361,7 @@ function updatePaginationQuery() {
 			withRenotes: props.withRenotes,
 			withReplies: props.withReplies,
 			withFiles: true,
+			dimension: dimension,
 		};
 	} else if (props.src === 'social') {
 		endpoint = 'notes/hybrid-timeline';
@@ -302,12 +369,14 @@ function updatePaginationQuery() {
 			withRenotes: props.withRenotes,
 			withReplies: props.withReplies,
 			withFiles: props.onlyFiles ? true : undefined,
+			dimension: dimension,
 		};
 	} else if (props.src === 'global') {
 		endpoint = 'notes/global-timeline';
 		query = {
 			withRenotes: props.withRenotes,
 			withFiles: props.onlyFiles ? true : undefined,
+			dimension: dimension,
 		};
 	} else if (props.src === 'mentions') {
 		endpoint = 'notes/mentions';
@@ -328,11 +397,13 @@ function updatePaginationQuery() {
 		endpoint = 'channels/timeline';
 		query = {
 			channelId: props.channel,
+			dimension: dimension,
 		};
 	} else if (props.src === 'role') {
 		endpoint = 'roles/notes';
 		query = {
 			roleId: props.role,
+			dimension: dimension,
 		};
 	} else {
 		endpoint = null;
@@ -361,7 +432,7 @@ function refreshEndpointAndChannel() {
 
 // デッキのリストカラムでwithRenotesを変更した場合に自動的に更新されるようにさせる
 // IDが切り替わったら切り替え先のTLを表示させたい
-watch(() => [props.list, props.antenna, props.channel, props.role, props.withRenotes], refreshEndpointAndChannel);
+watch(() => [props.list, props.antenna, props.channel, props.role, props.withRenotes, props.dimension], refreshEndpointAndChannel);
 
 // withSensitiveはクライアントで完結する処理のため、単にリロードするだけでOK
 watch(() => props.withSensitive, reloadTimeline);
@@ -447,5 +518,15 @@ defineExpose({
 
 .ad:empty {
 	display: none;
+}
+
+.gapMarker {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--MI_THEME-textSoft);
+	padding: 8px 0;
+	font-size: 1.2em;
+	user-select: none;
 }
 </style>

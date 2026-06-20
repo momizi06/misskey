@@ -19,6 +19,7 @@ import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { CacheService } from '@/core/CacheService.js';
 import { isReply } from '@/misc/is-reply.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
+import { normalizeDimension } from '@/misc/dimension.js';
 
 type TimelineOptions = {
 	untilId: string | null,
@@ -26,6 +27,7 @@ type TimelineOptions = {
 	limit: number,
 	allowPartial: boolean,
 	me?: { id: MiUser['id'] } | undefined | null,
+	viewerDimension?: number | null,
 	useDbFallback: boolean,
 	redisTimelines: FanoutTimelineName[],
 	noteFilter?: (note: MiNote) => boolean,
@@ -57,7 +59,11 @@ export class FanoutTimelineEndpointService {
 
 	@bindThis
 	async timeline(ps: TimelineOptions): Promise<Packed<'Note'>[]> {
-		return await this.noteEntityService.packMany(await this.getMiNotes(ps), ps.me);
+		return await this.noteEntityService.packMany(
+			await this.getMiNotes(ps),
+			ps.me,
+			{ viewerDimension: ps.viewerDimension },
+		);
 	}
 
 	@bindThis
@@ -68,7 +74,10 @@ export class FanoutTimelineEndpointService {
 		const ascending = ps.sinceId && !ps.untilId;
 		const idCompare: (a: string, b: string) => number = ascending ? (a, b) => a < b ? -1 : 1 : (a, b) => a > b ? -1 : 1;
 
-		const redisResult = await this.fanoutTimelineService.getMulti(ps.redisTimelines, ps.untilId, ps.sinceId);
+		const dimension = normalizeDimension(ps.viewerDimension, this.meta.dimensions ?? 1);
+		const redisResult = dimension == null
+			? await this.fanoutTimelineService.getMulti(ps.redisTimelines, ps.untilId, ps.sinceId)
+			: await this.fanoutTimelineService.getMultiDimension(ps.redisTimelines, dimension, ps.untilId, ps.sinceId);
 
 		// TODO: いい感じにgetMulti内でソート済だからuniqするときにredisResultが全てソート済なのを利用して再ソートを避けたい
 		const redisResultIds = Array.from(new Set(redisResult.flat(1))).sort(idCompare);

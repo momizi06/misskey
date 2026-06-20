@@ -617,6 +617,27 @@ export const packedMeDetailedOnlySchema = {
 				nullable: false, optional: false,
 			},
 		},
+		postingLang: {
+			type: 'string',
+			nullable: true, optional: false,
+			example: 'ja-JP',
+		},
+		viewingLangs: {
+			type: 'array',
+			nullable: false, optional: false,
+			items: {
+				type: 'string',
+				nullable: false, optional: false,
+			},
+		},
+		showMediaInAllLanguages: {
+			type: 'boolean',
+			nullable: false, optional: false,
+		},
+		showHashtagsInAllLanguages: {
+			type: 'boolean',
+			nullable: false, optional: false,
+		},
 		notificationRecieveConfig: {
 			type: 'object',
 			nullable: false, optional: false,

@@ -79,6 +79,7 @@ export class MetaEntityService {
 			uri: this.config.url,
 			description: instance.description,
 			langs: instance.langs,
+			dimensions: instance.dimensions,
 			tosUrl: instance.termsOfServiceUrl,
 			repositoryUrl: instance.repositoryUrl,
 			feedbackUrl: instance.feedbackUrl,
@@ -117,7 +118,9 @@ export class MetaEntityService {
 				place: ad.place as 'square' | 'horizontal' | 'horizontal-big' | 'vertical',
 				ratio: ad.ratio,
 				imageUrl: ad.imageUrl,
+				imageBlurhash: ad.imageBlurhash,
 				dayOfWeek: ad.dayOfWeek,
+				isSensitive: ad.isSensitive,
 			})),
 			wellKnownWebsites: instance.wellKnownWebsites,
 			notesPerOneAd: instance.notesPerOneAd,
@@ -179,4 +182,3 @@ export class MetaEntityService {
 		};
 	}
 }
-

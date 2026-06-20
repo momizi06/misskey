@@ -914,6 +914,17 @@ declare module '../api.js' {
     /**
      * No description provided.
      * 
+     * **Credential required**: *Yes* / **Permission**: *write:admin:roles*
+     */
+    request<E extends 'admin/roles/update-inline-policies', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
      * **Credential required**: *No* / **Permission**: *read:admin:roles*
      */
     request<E extends 'admin/roles/users', P extends Endpoints[E]['req']>(
@@ -928,17 +939,6 @@ declare module '../api.js' {
      * **Credential required**: *Yes* / **Permission**: *write:admin:send-email*
      */
     request<E extends 'admin/send-email', P extends Endpoints[E]['req']>(
-      endpoint: E,
-      params: P,
-      credential?: string | null,
-    ): Promise<SwitchCaseResponseType<E, P>>;
-
-    /**
-     * No description provided.
-     * 
-     * **Credential required**: *Yes* / **Permission**: *read:admin:server-info*
-     */
-    request<E extends 'admin/server-info', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,
       credential?: string | null,
@@ -3041,6 +3041,17 @@ declare module '../api.js' {
      * 
      * **Credential required**: *Yes* / **Permission**: *write:account*
      */
+    request<E extends 'i/purge-timeline-cache', P extends Endpoints[E]['req']>(
+      endpoint: E,
+      params: P,
+      credential?: string | null,
+    ): Promise<SwitchCaseResponseType<E, P>>;
+
+    /**
+     * No description provided.
+     * 
+     * **Credential required**: *Yes* / **Permission**: *write:account*
+     */
     request<E extends 'i/read-announcement', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,
@@ -4095,17 +4106,6 @@ declare module '../api.js' {
      * **Credential required**: *No*
      */
     request<E extends 'roles/users', P extends Endpoints[E]['req']>(
-      endpoint: E,
-      params: P,
-      credential?: string | null,
-    ): Promise<SwitchCaseResponseType<E, P>>;
-
-    /**
-     * No description provided.
-     * 
-     * **Credential required**: *No*
-     */
-    request<E extends 'server-info', P extends Endpoints[E]['req']>(
       endpoint: E,
       params: P,
       credential?: string | null,

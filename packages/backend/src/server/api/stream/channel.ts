@@ -4,9 +4,11 @@
  */
 
 import { bindThis } from '@/decorators.js';
+import { shouldDeliverByDimension } from '@/misc/dimension.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { isUserRelated } from '@/misc/is-user-related.js';
 import { isRenotePacked, isQuotePacked } from '@/misc/is-renote.js';
+import type { Awaitable } from '@/types.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type Connection from './Connection.js';
@@ -18,6 +20,7 @@ import type Connection from './Connection.js';
 export default abstract class Channel {
 	protected connection: Connection;
 	public id: string;
+	public dimension: number | null = null;
 	public abstract readonly chName: string;
 	public static readonly shouldShare: boolean;
 	public static readonly requireCredential: boolean;
@@ -59,8 +62,54 @@ export default abstract class Channel {
 		return this.connection.followingChannels;
 	}
 
+	protected setDimension(value: number | null | undefined): void {
+		if (value === null || value === undefined) {
+			this.dimension = null;
+			return;
+		}
+		this.dimension = this.connection.normalizeDimension(value);
+	}
+
 	protected get subscriber() {
 		return this.connection.subscriber;
+	}
+
+	protected isNoteVisibleForMe(note: Packed<'Note'>): boolean {
+		// This code must always be synchronized with the checks in QueryService.generateVisibilityQuery.
+		const meId = this.connection.user?.id ?? null;
+
+		// visibility が specified かつ自分が指定されていなかったら非表示
+		if (note.visibility === 'specified') {
+			if (meId == null) {
+				return false;
+			} else if (meId === note.userId) {
+				return true;
+			} else {
+				// 指定されているかどうか
+				return (note.visibleUserIds?.some(id => meId === id) ?? false)
+					|| (note.mentions?.some(id => meId === id) ?? false);
+			}
+		}
+
+		// visibility が followers かつ自分が投稿者のフォロワーでなかったら非表示
+		if (note.visibility === 'followers') {
+			if (meId == null) {
+				return false;
+			} else if (meId === note.userId) {
+				return true;
+			} else if (note.reply && (meId === note.reply.userId)) {
+				// 自分の投稿に対するリプライ
+				return true;
+			} else if (note.mentions && note.mentions.some(id => meId === id)) {
+				// 自分へのメンション
+				return true;
+			} else {
+				// フォロワーかどうか
+				return Object.hasOwn(this.following, note.userId);
+			}
+		}
+
+		return true;
 	}
 
 	/*
@@ -81,9 +130,14 @@ export default abstract class Channel {
 		return false;
 	}
 
-	constructor(id: string, connection: Connection) {
+	protected shouldDeliverByDimension(note: Packed<'Note'>): boolean {
+		return shouldDeliverByDimension(note, this.dimension, this.user?.id);
+	}
+
+	constructor(id: string, connection: Connection, dimension?: number | null) {
 		this.id = id;
 		this.connection = connection;
+		this.setDimension(dimension);
 	}
 
 	public send(payload: { type: string, body: JsonValue }): void;
@@ -100,7 +154,14 @@ export default abstract class Channel {
 		});
 	}
 
-	public abstract init(params: JsonObject): Promise<void> | void;
+	/**
+	 * チャンネルの初期化処理（接続時点での接続可否チェックを兼ねる）
+	 *
+	 * - `void / Promise<void>` を返す場合は、チェックなし
+	 * - `true / Promise<true>` を返す場合は、接続可能
+	 * - `false / Promise<false>` を返す場合は、接続不可（接続を切断）
+	 */
+	public abstract init(params: JsonObject): Awaitable<void | boolean>;
 
 	public dispose?(): void;
 
@@ -111,5 +172,5 @@ export type MiChannelService<T extends boolean> = {
 	shouldShare: boolean;
 	requireCredential: T;
 	kind: T extends true ? string : string | null | undefined;
-	create: (id: string, connection: Connection) => Channel;
+	create: (id: string, connection: Connection, dimension?: number | null) => Channel;
 };

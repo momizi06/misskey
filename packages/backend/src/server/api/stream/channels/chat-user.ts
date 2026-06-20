@@ -23,15 +23,20 @@ class ChatUserChannel extends Channel {
 		id: string,
 		connection: Channel['connection'],
 	) {
-		super(id, connection);
+		super(id, connection, null);
 	}
 
 	@bindThis
-	public async init(params: JsonObject) {
-		if (typeof params.otherId !== 'string') return;
+	public async init(params: JsonObject): Promise<boolean> {
+		if (typeof params.otherId !== 'string') return false;
+		if (!this.user) return false;
+		if (params.otherId === this.user.id) return false;
+
 		this.otherId = params.otherId;
 
-		this.subscriber.on(`chatUserStream:${this.user!.id}-${this.otherId}`, this.onEvent);
+		this.subscriber.on(`chatUserStream:${this.user.id}-${this.otherId}`, this.onEvent);
+
+		return true;
 	}
 
 	@bindThis
@@ -68,7 +73,7 @@ export class ChatUserChannelService implements MiChannelService<true> {
 	}
 
 	@bindThis
-	public create(id: string, connection: Channel['connection']): ChatUserChannel {
+	public create(id: string, connection: Channel['connection'], dimension?: number | null): ChatUserChannel {
 		return new ChatUserChannel(
 			this.chatService,
 			id,

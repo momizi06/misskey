@@ -20,7 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<SearchMarker :keywords="['language']">
 							<MkSelect v-model="lang">
 								<template #label><SearchLabel>{{ i18n.ts.uiLanguage }}</SearchLabel></template>
-								<option v-for="x in langs" :key="x[0]" :value="x[0]">{{ x[1] }}</option>
+								<option v-for="x in langs" :key="x[0]" :value="x[0]">{{ x[0] === 'other' ? i18n.ts.other : x[1] }}</option>
 								<template #caption>
 									<I18n :src="i18n.ts.i18nInfo" tag="span">
 										<template #link>
@@ -112,6 +112,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 								</div>
 							</MkPreferenceContainer>
 						</SearchMarker>
+
+						<SearchMarker :keywords="['adult', 'sensitive', 'nsfw', '18', 'consent']">
+							<MkFolder>
+								<template #icon><i class="ti ti-rating-18-plus"></i></template>
+								<template #label><SearchLabel>{{ i18n.ts.displayOfSensitiveContentConsent }}</SearchLabel></template>
+								<template #suffix>{{ i18n.ts._displayOfSensitiveContentConsent[sensitiveContentConsentSetting] }}</template>
+
+								<div class="_buttons">
+									<MkButton full @click="configureSensitiveContentConsentFromSettings">{{ i18n.ts.configure }}</MkButton>
+								</div>
+							</MkFolder>
+						</SearchMarker>
 					</div>
 				</MkFolder>
 			</SearchMarker>
@@ -139,6 +151,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 								</MkPreferenceContainer>
 							</SearchMarker>
 
+							<SearchMarker :keywords="['draft', 'drafts', 'post', 'form', 'autoload']">
+								<MkPreferenceContainer k="autoloadDrafts">
+									<MkSwitch v-model="autoloadDrafts">
+										<template #label><SearchLabel>{{ i18n.ts.autoloadDrafts }}</SearchLabel></template>
+									</MkSwitch>
+								</MkPreferenceContainer>
+							</SearchMarker>
+
 							<SearchMarker :keywords="['renote']">
 								<MkPreferenceContainer k="collapseRenotes">
 									<MkSwitch v-model="collapseRenotes">
@@ -162,6 +182,83 @@ SPDX-License-Identifier: AGPL-3.0-only
 										<template #label><SearchLabel>{{ i18n.ts.disableStreamingTimeline }}</SearchLabel></template>
 									</MkSwitch>
 								</MkPreferenceContainer>
+							</SearchMarker>
+
+							<SearchMarker :keywords="['dimension']">
+								<MkPreferenceContainer k="dimension">
+									<MkInput v-model="dimension" type="number" min="0" :max="instance.dimensions" step="1" manualSave>
+										<template #label><SearchLabel>{{ i18n.ts.dimension }}</SearchLabel></template>
+										<template #caption>{{ i18n.ts.dimensionDescription }}</template>
+									</MkInput>
+								</MkPreferenceContainer>
+							</SearchMarker>
+
+							<SearchMarker :keywords="['language', 'note', 'timeline']">
+								<MkFolder>
+									<template #label><SearchLabel>{{ i18n.ts.postingAndViewingLanguage }}</SearchLabel></template>
+									<div class="_gaps_s">
+									<MkSelect v-model="postingLang">
+										<template #label><SearchLabel>{{ i18n.ts.postingLanguage }}</SearchLabel></template>
+										<option v-for="code in languageCodes" :key="code" :value="code">{{ code === 'other' ? i18n.ts.other : langmap[code].nativeName }}</option>
+										<template #caption>{{ i18n.ts.postingLanguageDescription }}</template>
+									</MkSelect>
+
+									<MkInfo v-if="shouldNotifyPostingLangReconfigure" warn>
+										{{ i18n.ts.postingLanguageBrowserLangChanged }}
+									</MkInfo>
+
+										<MkSwitch v-model="showAllViewingLangs">
+											{{ i18n.ts.viewingLanguagesShowAll }}
+											<template #caption>{{ i18n.ts.viewingLanguagesShowAllDescription }}</template>
+										</MkSwitch>
+
+										<template v-if="!showAllViewingLangs">
+											<div :class="$style.viewingLangSelector">
+												<MkSelect v-model="viewingLangToAdd" style="flex: 1;">
+													<template #label><SearchLabel>{{ i18n.ts.viewingLanguages }}</SearchLabel></template>
+													<option v-for="code in addableViewingLangs" :key="code" :value="code">{{ getViewingLangLabel(code) }}</option>
+													<template #caption>{{ i18n.ts.viewingLanguagesDescription }}</template>
+												</MkSelect>
+												<MkButton :disabled="viewingLangToAdd == null" @click="addViewingLang">
+													<i class="ti ti-plus"></i> {{ i18n.ts.add }}
+												</MkButton>
+											</div>
+
+											<div :class="$style.langTags">
+												<MkTagItem
+													v-for="code in viewingLangs"
+													:key="code"
+													:content="getViewingLangLabel(code)"
+													:exButtonIconClass="'ti ti-x'"
+													:class="$style.langTag"
+													@exButtonClick="removeViewingLang(code)"
+												/>
+											</div>
+
+											<div class="_gaps_s">
+												<MkSwitch v-model="showMediaInAllLanguages">
+													{{ i18n.ts.viewingLanguagesShowAllMedia }}
+													<template #caption>{{ i18n.ts.viewingLanguagesShowAllMediaDescription }}</template>
+												</MkSwitch>
+												<MkSwitch v-model="showHashtagsInAllLanguages">
+													{{ i18n.ts.viewingLanguagesShowAllHashtags }}
+													<template #caption>{{ i18n.ts.viewingLanguagesShowAllHashtagsDescription }}</template>
+												</MkSwitch>
+												<MkSwitch v-model="includeUnknown">
+													{{ i18n.ts.viewingLanguagesIncludeUnknown }}
+													<template #caption>{{ i18n.ts.viewingLanguagesIncludeUnknownDescription }}</template>
+												</MkSwitch>
+												<MkSwitch v-if="includeUnknown" v-model="includeRemote">
+													{{ i18n.ts.viewingLanguagesIncludeRemote }}
+												</MkSwitch>
+											</div>
+										</template>
+
+										<div v-if="languageUnsaved" class="_buttons">
+											<MkButton primary full :disabled="languageSaving" @click="saveLanguageConfig"><i class="ti ti-check"></i> {{ i18n.ts.save }}</MkButton>
+										</div>
+									</div>
+								</MkFolder>
 							</SearchMarker>
 
 							<SearchMarker :keywords="['pinned', 'list']">
@@ -694,6 +791,17 @@ SPDX-License-Identifier: AGPL-3.0-only
 							</MkPreferenceContainer>
 						</SearchMarker>
 
+						<SearchMarker :keywords="['ad', 'adult', 'sensitive', 'nsfw', '18']">
+							<MkPreferenceContainer k="displayOfSensitiveAds">
+								<MkSelect v-model="displayOfSensitiveAds">
+									<template #label><SearchLabel>{{ i18n.ts.displayOfSensitiveAds }}</SearchLabel></template>
+									<option value="hidden">{{ i18n.ts._displayOfSensitiveAds.hidden }}</option>
+									<option value="always">{{ i18n.ts._displayOfSensitiveAds.always }}</option>
+									<option value="filtered">{{ i18n.ts._displayOfSensitiveAds.filtered }}</option>
+								</MkSelect>
+							</MkPreferenceContainer>
+						</SearchMarker>
+
 						<SearchMarker>
 							<MkPreferenceContainer k="hemisphere">
 								<MkRadios v-model="hemisphere">
@@ -739,6 +847,7 @@ import { langs } from '@@/js/config.js';
 import * as Misskey from 'misskey-js';
 import MkSwitch from '@/components/MkSwitch.vue';
 import MkSelect from '@/components/MkSelect.vue';
+import MkInput from '@/components/MkInput.vue';
 import MkRadios from '@/components/MkRadios.vue';
 import MkRange from '@/components/MkRange.vue';
 import MkFolder from '@/components/MkFolder.vue';
@@ -754,12 +863,18 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { prefer } from '@/preferences.js';
+import { getDeviceId, setUserProperties } from '@/utility/tracking-user-properties.js';
 import MkPreferenceContainer from '@/components/MkPreferenceContainer.vue';
 import MkFeatureBanner from '@/components/MkFeatureBanner.vue';
 import { globalEvents } from '@/events.js';
 import { claimAchievement } from '@/utility/achievements.js';
 import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
+import { configureSensitiveContentConsent, sensitiveContentConsent } from '@/utility/sensitive-content-consent.js';
+import MkTagItem from '@/components/MkTagItem.vue';
+import { langmap, postingLangCodes } from '@/utility/langmap.js';
+import { getAutoPostingLang, getDefaultViewingLangs } from '@/utility/posting-language.js';
+import { updateCurrentAccountPartial } from '@/accounts.js';
 
 const $i = ensureSignin();
 
@@ -780,14 +895,17 @@ const showRenotesCount = prefer.model('showRenotesCount');
 const showReactionsCount = prefer.model('showReactionsCount');
 const enableQuickAddMfmFunction = prefer.model('enableQuickAddMfmFunction');
 const forceShowAds = prefer.model('forceShowAds');
+const displayOfSensitiveAds = prefer.model('displayOfSensitiveAds');
 const loadRawImages = prefer.model('loadRawImages');
 const imageNewTab = prefer.model('imageNewTab');
 const showFixedPostForm = prefer.model('showFixedPostForm');
 const showFixedPostFormInChannel = prefer.model('showFixedPostFormInChannel');
+const autoloadDrafts = prefer.model('autoloadDrafts');
 const numberOfPageCache = prefer.model('numberOfPageCache');
 const enableInfiniteScroll = prefer.model('enableInfiniteScroll');
 const useReactionPickerForContextMenu = prefer.model('useReactionPickerForContextMenu');
 const disableStreamingTimeline = prefer.model('disableStreamingTimeline');
+const dimension = prefer.model('dimension');
 const useGroupedNotifications = prefer.model('useGroupedNotifications');
 const alwaysConfirmFollow = prefer.model('alwaysConfirmFollow');
 const confirmWhenRevealingSensitiveMedia = prefer.model('confirmWhenRevealingSensitiveMedia');
@@ -824,6 +942,46 @@ const contextMenu = prefer.model('contextMenu');
 const menuStyle = prefer.model('menuStyle');
 const makeEveryTextElementsSelectable = prefer.model('makeEveryTextElementsSelectable');
 
+const browserLanguage = typeof navigator === 'undefined' ? null : navigator.language;
+const supportedLangCodes = postingLangCodes.filter((code): code is Exclude<(typeof postingLangCodes)[number], 'other'> => code !== 'other');
+const supportedLangCodeSet = new Set(supportedLangCodes);
+const isSupportedPostingLang = (code: string) => code === 'other' || supportedLangCodeSet.has(code as (typeof supportedLangCodes)[number]);
+const normalizedPostingLang = $i.postingLang === null ? null : (isSupportedPostingLang($i.postingLang) ? $i.postingLang : null);
+const hasLanguageConfig = $i.postingLang != null || ($i.viewingLangs?.length ?? 0) > 0;
+const autoPostingLang = getAutoPostingLang(browserLanguage);
+const initialPostingLang = hasLanguageConfig ? normalizedPostingLang : autoPostingLang;
+const postingLang = ref<string | null>(initialPostingLang);
+const languageCodes = [...postingLangCodes];
+const rawInitialViewingLangs = hasLanguageConfig ? ($i.viewingLangs ?? []) : getDefaultViewingLangs(autoPostingLang);
+const initialViewingLangs = Array.from(new Set(rawInitialViewingLangs.map((code) => {
+	if (code === 'unknown' || code === 'remote' || code === null) return code;
+	return isSupportedPostingLang(code) ? code : null;
+}).filter(Boolean)));
+const showAllViewingLangs = ref(hasLanguageConfig ? initialViewingLangs.length === 0 : false);
+const includeUnknown = ref(initialViewingLangs.includes('unknown'));
+const includeRemote = ref(initialViewingLangs.includes('remote'));
+const viewingLangs = ref<string[]>(initialViewingLangs.filter((code): code is string => typeof code === 'string' && code !== 'unknown' && code !== 'remote'));
+const viewingLangToAdd = ref<string | null>(postingLang.value);
+const showMediaInAllLanguages = ref($i.showMediaInAllLanguages ?? true);
+const showHashtagsInAllLanguages = ref($i.showHashtagsInAllLanguages ?? true);
+const addableViewingLangs = computed(() =>
+	languageCodes.filter(code => !viewingLangs.value.includes(code)),
+);
+const languageUnsaved = ref(false);
+let languageSaving = false;
+const autoDetectedPostingLang = miLocalStorage.getItem('postingLangAutoDetected');
+const autoDetectedBrowserLang = miLocalStorage.getItem('postingLangAutoDetectBase');
+const shouldNotifyPostingLangReconfigure = computed(() =>
+	autoDetectedPostingLang != null
+	&& postingLang.value === autoDetectedPostingLang
+	&& autoDetectedBrowserLang != null
+	&& browserLanguage != null
+	&& autoDetectedBrowserLang !== browserLanguage
+);
+
+type SensitiveContentConsentSetting = 'show' | 'hide' | 'notSet';
+const sensitiveContentConsentSetting = computed<SensitiveContentConsentSetting>(() => sensitiveContentConsent.value === null ? 'notSet' : sensitiveContentConsent.value ? 'show' : 'hide');
+
 const fontSize = ref(miLocalStorage.getItem('fontSize'));
 const useSystemFont = ref(miLocalStorage.getItem('useSystemFont') != null);
 
@@ -848,6 +1006,118 @@ watch(useSystemFont, () => {
 		miLocalStorage.removeItem('useSystemFont');
 	}
 });
+
+function getViewingLangLabel(code: string): string {
+	if (code === 'unknown') return i18n.ts.unknown;
+	if (code === 'remote') return i18n.ts.remote;
+	if (code === 'other') return i18n.ts.other;
+	return langmap[code]?.nativeName ?? code;
+}
+
+function removeViewingLang(code: string) {
+	viewingLangs.value = viewingLangs.value.filter(value => value !== code);
+}
+
+function addViewingLang() {
+	if (viewingLangToAdd.value == null) return;
+	if (!viewingLangs.value.includes(viewingLangToAdd.value)) {
+		viewingLangs.value = [...viewingLangs.value, viewingLangToAdd.value];
+	}
+	viewingLangToAdd.value = null;
+}
+
+watch(showAllViewingLangs, (value) => {
+	if (languageSaving) return;
+	if (value) {
+		viewingLangs.value = [];
+		viewingLangToAdd.value = null;
+		includeUnknown.value = false;
+		includeRemote.value = false;
+	} else {
+		const fallbackLang = postingLang.value ?? getAutoPostingLang(browserLanguage);
+		viewingLangs.value = getDefaultViewingLangs(fallbackLang);
+		viewingLangToAdd.value = null;
+		includeUnknown.value = true;
+		includeRemote.value = true;
+	}
+	languageUnsaved.value = true;
+});
+
+watch([includeUnknown, includeRemote, viewingLangs, showAllViewingLangs, showMediaInAllLanguages, showHashtagsInAllLanguages], () => {
+	if (languageSaving) return;
+	languageUnsaved.value = true;
+}, { deep: true });
+
+watch(postingLang, (value) => {
+	if (languageSaving) return;
+	if (!showAllViewingLangs.value && value != null && !viewingLangs.value.includes(value)) {
+		viewingLangs.value = [...viewingLangs.value, value];
+	}
+	languageUnsaved.value = true;
+});
+
+type ViewingLangCode = Misskey.entities.MeDetailed['viewingLangs'][number];
+
+async function saveLanguageConfig() {
+	const requestedViewingLangs = new Set<ViewingLangCode>(showAllViewingLangs.value ? [] : [
+		...viewingLangs.value.filter(Boolean),
+		...(includeUnknown.value ? [
+			'unknown',
+			...(includeRemote.value ? ['remote'] : []),
+		] : []),
+	]);
+
+	const isPostingLangChanged = $i.postingLang !== postingLang.value;
+	const isViewingLangsChanged = new Set($i.viewingLangs).symmetricDifference(requestedViewingLangs).size !== 0;
+	const isShowMediaInAllLanguagesChanged = $i.showMediaInAllLanguages !== showMediaInAllLanguages.value;
+	const isShowHashtagsInAllLanguagesChanged = $i.showHashtagsInAllLanguages !== showHashtagsInAllLanguages.value;
+
+	const i = await os.apiWithDialog('i/update', {
+		postingLang: postingLang.value ?? null,
+		viewingLangs: [...requestedViewingLangs],
+		showMediaInAllLanguages: showMediaInAllLanguages.value,
+		showHashtagsInAllLanguages: showHashtagsInAllLanguages.value,
+	});
+
+	updateCurrentAccountPartial({
+		postingLang: i.postingLang,
+		viewingLangs: i.viewingLangs,
+		showMediaInAllLanguages: i.showMediaInAllLanguages,
+		showHashtagsInAllLanguages: i.showHashtagsInAllLanguages,
+	});
+
+	languageSaving = true;
+	postingLang.value = i.postingLang ?? null;
+	showAllViewingLangs.value = i.viewingLangs.length === 0;
+	includeUnknown.value = i.viewingLangs.includes('unknown');
+	includeRemote.value = i.viewingLangs.includes('remote');
+	viewingLangs.value = i.viewingLangs.filter(code => code !== 'unknown' && code !== 'remote');
+	showMediaInAllLanguages.value = i.showMediaInAllLanguages ?? true;
+	showHashtagsInAllLanguages.value = i.showHashtagsInAllLanguages ?? true;
+
+	queueMicrotask(() => {
+		languageSaving = false;
+		languageUnsaved.value = false;
+	});
+
+	if (isPostingLangChanged) claimAchievement('postingLanguageConfigured');
+	if (isViewingLangsChanged || isShowMediaInAllLanguagesChanged || isShowHashtagsInAllLanguagesChanged) {
+		claimAchievement('viewingLanguagesConfigured');
+	}
+	if (isPostingLangChanged) {
+		miLocalStorage.removeItem('postingLangAutoDetected');
+		miLocalStorage.removeItem('postingLangAutoDetectBase');
+	}
+}
+
+watch(dimension, (value, previous) => {
+	if (value === previous) return;
+	claimAchievement('dimensionConfigured');
+});
+
+async function configureSensitiveContentConsentFromSettings() {
+	await configureSensitiveContentConsent();
+}
 
 watch([
 	hemisphere,
@@ -878,6 +1148,15 @@ watch([
 	makeEveryTextElementsSelectable,
 ], async () => {
 	await reloadAsk({ reason: i18n.ts.reloadToApplySetting, unison: true });
+});
+
+watch(displayOfSensitiveAds, (to) => {
+	const consentValue = sensitiveContentConsent.value === null ? 'unset' : String(sensitiveContentConsent.value);
+	setUserProperties({
+		deviceId: getDeviceId(),
+		sensitiveContentConsent: consentValue,
+		displayOfSensitiveAds: to,
+	});
 });
 
 const emojiIndexLangs = ['en-US', 'ja-JP', 'ja-JP_hira'] as const;
@@ -1000,3 +1279,24 @@ definePage(() => ({
 	icon: 'ti ti-adjustments',
 }));
 </script>
+
+<style lang="scss" module>
+.viewingLangSelector {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+}
+
+.langTags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.langTag {
+	user-select: none;
+	> span {
+		padding-left: 4px;
+	}
+}
+</style>

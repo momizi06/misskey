@@ -41,6 +41,7 @@ import {
 	MiModerationLog,
 	MiMuting,
 	MiNote,
+	MiNoteLanguage,
 	MiNoteFavorite,
 	MiScheduledNote,
 	MiNoteReaction,
@@ -71,10 +72,12 @@ import {
 	MiUser,
 	MiUserIp,
 	MiUserKeypair,
+	MiUserLanguage,
 	MiUserList,
 	MiUserListFavorite,
 	MiUserListMembership,
 	MiUserMemo,
+	MiUserInlinePolicy,
 	MiUserNotePining,
 	MiUserPending,
 	MiUserProfile,
@@ -100,6 +103,12 @@ const $usersRepository: Provider = {
 const $notesRepository: Provider = {
 	provide: DI.notesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiNote).extend(miRepository as MiRepository<MiNote>),
+	inject: [DI.db],
+};
+
+const $noteLanguagesRepository: Provider = {
+	provide: DI.noteLanguagesRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiNoteLanguage).extend(miRepository as MiRepository<MiNoteLanguage>),
 	inject: [DI.db],
 };
 
@@ -166,6 +175,12 @@ const $pollVotesRepository: Provider = {
 const $userProfilesRepository: Provider = {
 	provide: DI.userProfilesRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserProfile).extend(miRepository as MiRepository<MiUserProfile>),
+	inject: [DI.db],
+};
+
+const $userLanguagesRepository: Provider = {
+	provide: DI.userLanguagesRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiUserLanguage).extend(miRepository as MiRepository<MiUserLanguage>),
 	inject: [DI.db],
 };
 
@@ -511,6 +526,12 @@ const $roleAssignmentsRepository: Provider = {
 	inject: [DI.db],
 };
 
+const $userInlinePoliciesRepository: Provider = {
+	provide: DI.userInlinePoliciesRepository,
+	useFactory: (db: DataSource) => db.getRepository(MiUserInlinePolicy).extend(miRepository as MiRepository<MiUserInlinePolicy>),
+	inject: [DI.db],
+};
+
 const $userMemosRepository: Provider = {
 	provide: DI.userMemosRepository,
 	useFactory: (db: DataSource) => db.getRepository(MiUserMemo).extend(miRepository as MiRepository<MiUserMemo>),
@@ -570,6 +591,7 @@ const $abuseReportResolversRepository: Provider = {
 	providers: [
 		$usersRepository,
 		$notesRepository,
+		$noteLanguagesRepository,
 		$announcementsRepository,
 		$announcementReadsRepository,
 		$appsRepository,
@@ -581,6 +603,7 @@ const $abuseReportResolversRepository: Provider = {
 		$pollsRepository,
 		$pollVotesRepository,
 		$userProfilesRepository,
+		$userLanguagesRepository,
 		$userKeypairsRepository,
 		$userPendingsRepository,
 		$userSecurityKeysRepository,
@@ -636,6 +659,7 @@ const $abuseReportResolversRepository: Provider = {
 		$retentionAggregationsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
+		$userInlinePoliciesRepository,
 		$flashsRepository,
 		$flashLikesRepository,
 		$userMemosRepository,
@@ -651,6 +675,7 @@ const $abuseReportResolversRepository: Provider = {
 	exports: [
 		$usersRepository,
 		$notesRepository,
+		$noteLanguagesRepository,
 		$announcementsRepository,
 		$announcementReadsRepository,
 		$appsRepository,
@@ -662,6 +687,7 @@ const $abuseReportResolversRepository: Provider = {
 		$pollsRepository,
 		$pollVotesRepository,
 		$userProfilesRepository,
+		$userLanguagesRepository,
 		$userKeypairsRepository,
 		$userPendingsRepository,
 		$userSecurityKeysRepository,
@@ -717,6 +743,7 @@ const $abuseReportResolversRepository: Provider = {
 		$retentionAggregationsRepository,
 		$rolesRepository,
 		$roleAssignmentsRepository,
+		$userInlinePoliciesRepository,
 		$flashsRepository,
 		$flashLikesRepository,
 		$userMemosRepository,

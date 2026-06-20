@@ -17,19 +17,23 @@ import components from '@/components/index.js';
 import { applyTheme } from '@/theme.js';
 import { isDeviceDarkmode } from '@/utility/is-device-darkmode.js';
 import { i18n } from '@/i18n.js';
-import { refreshCurrentAccount, login } from '@/accounts.js';
+import { refreshCurrentAccount, login, updateCurrentAccountPartial } from '@/accounts.js';
 import { store } from '@/store.js';
 import { fetchInstance, instance } from '@/instance.js';
 import { deviceKind, updateDeviceKind } from '@/utility/device-kind.js';
 import { reloadChannel } from '@/utility/unison-reload.js';
 import { getUrlWithoutLoginId } from '@/utility/login-id.js';
 import { getAccountFromId } from '@/utility/get-account-from-id.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
 import { deckStore } from '@/ui/deck/deck-store.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { fetchCustomEmojis } from '@/custom-emojis.js';
 import { prefer } from '@/preferences.js';
+import { sensitiveContentConsent } from '@/utility/sensitive-content-consent.js';
+import { getDeviceId, setUserProperties } from '@/utility/tracking-user-properties.js';
 import { $i } from '@/i.js';
 import { mainRouter } from '@/router.js';
+import { getAutoPostingLang, getDefaultViewingLangs } from '@/utility/posting-language.js';
 
 export async function common(createVue: () => Promise<App<Element>>) {
 	console.info(`Misskey v${version}`);
@@ -113,6 +117,35 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 	await store.ready;
 	await deckStore.ready;
+
+	if ($i) {
+		const hasLanguageConfig = $i.postingLang != null || ($i.viewingLangs?.length ?? 0) > 0;
+		if (!hasLanguageConfig) {
+			const browserLanguage = typeof navigator === 'undefined' ? null : navigator.language;
+			const autoPostingLang = getAutoPostingLang(browserLanguage);
+			const defaultViewingLangs = getDefaultViewingLangs(autoPostingLang);
+			try {
+				const updated = await misskeyApi('i/update', {
+					postingLang: autoPostingLang,
+					viewingLangs: defaultViewingLangs,
+				});
+				updateCurrentAccountPartial({
+					postingLang: updated.postingLang,
+					viewingLangs: updated.viewingLangs,
+					showMediaInAllLanguages: updated.showMediaInAllLanguages,
+					showHashtagsInAllLanguages: updated.showHashtagsInAllLanguages,
+				});
+				miLocalStorage.setItem('postingLangAutoDetected', autoPostingLang);
+				if (browserLanguage) {
+					miLocalStorage.setItem('postingLangAutoDetectBase', browserLanguage);
+				} else {
+					miLocalStorage.removeItem('postingLangAutoDetectBase');
+				}
+			} catch (err) {
+				console.warn('Failed to set default language config', err);
+			}
+		}
+	}
 
 	const fetchInstanceMetaPromise = fetchInstance();
 
@@ -347,8 +380,10 @@ export async function common(createVue: () => Promise<App<Element>>) {
 
 	if (instance.sentryForFrontend) {
 		const Sentry = await import('@sentry/vue');
+
 		Sentry.init({
 			app,
+			release: version,
 			integrations: [
 				...(instance.sentryForFrontend.vueIntegration !== undefined ? [
 					Sentry.vueIntegration(instance.sentryForFrontend.vueIntegration ?? undefined),
@@ -377,6 +412,15 @@ export async function common(createVue: () => Promise<App<Element>>) {
 			} : {}),
 
 			...instance.sentryForFrontend.options,
+		});
+	}
+
+	if (instance.sentryForFrontend || instance.googleAnalyticsId) {
+		const consentValue = sensitiveContentConsent.value === null ? 'unset' : String(sensitiveContentConsent.value);
+		setUserProperties({
+			deviceId: getDeviceId(),
+			sensitiveContentConsent: consentValue,
+			displayOfSensitiveAds: String(prefer.s.displayOfSensitiveAds),
 		});
 	}
 

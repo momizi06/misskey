@@ -112,10 +112,10 @@ import type {
 	AdminRolesUnassignRequest,
 	AdminRolesUpdateRequest,
 	AdminRolesUpdateDefaultPoliciesRequest,
+	AdminRolesUpdateInlinePoliciesRequest,
 	AdminRolesUsersRequest,
 	AdminRolesUsersResponse,
 	AdminSendEmailRequest,
-	AdminServerInfoResponse,
 	AdminShowModerationLogsRequest,
 	AdminShowModerationLogsResponse,
 	AdminShowUserRequest,
@@ -408,6 +408,7 @@ import type {
 	IPagesResponse,
 	IPinRequest,
 	IPinResponse,
+	IPurgeTimelineCacheRequest,
 	IReadAnnouncementRequest,
 	IRegenerateTokenRequest,
 	IRegistryGetRequest,
@@ -548,7 +549,6 @@ import type {
 	RolesShowResponse,
 	RolesUsersRequest,
 	RolesUsersResponse,
-	ServerInfoResponse,
 	StatsResponse,
 	SwRegisterRequest,
 	SwRegisterResponse,
@@ -710,9 +710,9 @@ export type Endpoints = {
 	'admin/roles/unassign': { req: AdminRolesUnassignRequest; res: EmptyResponse };
 	'admin/roles/update': { req: AdminRolesUpdateRequest; res: EmptyResponse };
 	'admin/roles/update-default-policies': { req: AdminRolesUpdateDefaultPoliciesRequest; res: EmptyResponse };
+	'admin/roles/update-inline-policies': { req: AdminRolesUpdateInlinePoliciesRequest; res: EmptyResponse };
 	'admin/roles/users': { req: AdminRolesUsersRequest; res: AdminRolesUsersResponse };
 	'admin/send-email': { req: AdminSendEmailRequest; res: EmptyResponse };
-	'admin/server-info': { req: EmptyRequest; res: AdminServerInfoResponse };
 	'admin/show-moderation-logs': { req: AdminShowModerationLogsRequest; res: AdminShowModerationLogsResponse };
 	'admin/show-user': { req: AdminShowUserRequest; res: AdminShowUserResponse };
 	'admin/show-user-account-move-logs': { req: AdminShowUserAccountMoveLogsRequest; res: AdminShowUserAccountMoveLogsResponse };
@@ -900,6 +900,7 @@ export type Endpoints = {
 	'i/page-likes': { req: IPageLikesRequest; res: IPageLikesResponse };
 	'i/pages': { req: IPagesRequest; res: IPagesResponse };
 	'i/pin': { req: IPinRequest; res: IPinResponse };
+	'i/purge-timeline-cache': { req: IPurgeTimelineCacheRequest; res: EmptyResponse };
 	'i/read-announcement': { req: IReadAnnouncementRequest; res: EmptyResponse };
 	'i/regenerate-token': { req: IRegenerateTokenRequest; res: EmptyResponse };
 	'i/registry/get': { req: IRegistryGetRequest; res: IRegistryGetResponse };
@@ -996,7 +997,6 @@ export type Endpoints = {
 	'roles/notes': { req: RolesNotesRequest; res: RolesNotesResponse };
 	'roles/show': { req: RolesShowRequest; res: RolesShowResponse };
 	'roles/users': { req: RolesUsersRequest; res: RolesUsersResponse };
-	'server-info': { req: EmptyRequest; res: ServerInfoResponse };
 	'stats': { req: EmptyRequest; res: StatsResponse };
 	'sw/register': { req: SwRegisterRequest; res: SwRegisterResponse };
 	'sw/show-registration': { req: SwShowRegistrationRequest; res: SwShowRegistrationResponse };

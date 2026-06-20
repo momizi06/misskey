@@ -22,13 +22,14 @@ class MainChannel extends Channel {
 		id: string,
 		connection: Channel['connection'],
 	) {
-		super(id, connection);
+		super(id, connection, null);
 	}
 
 	@bindThis
-	public async init(params: JsonObject) {
-		// Subscribe main stream channel
-		this.subscriber.on(`mainStream:${this.user!.id}`, async data => {
+	public async init(params: JsonObject): Promise<boolean> {
+		if (!this.user) return false;
+
+		this.subscriber.on(`mainStream:${this.user.id}`, async data => {
 			switch (data.type) {
 				case 'notification': {
 					// Ignore notifications from instances the user has muted
@@ -38,6 +39,8 @@ class MainChannel extends Channel {
 					if (data.body.note && data.body.note.isHidden) {
 						const note = await this.noteEntityService.pack(data.body.note.id, this.user, {
 							detail: true,
+							skipLanguageCheck: true,
+							viewerDimension: null,
 						});
 
 						if (this.user && (note.visibleUserIds?.includes(this.user.id) ?? note.mentions?.includes(this.user.id))) {
@@ -50,11 +53,13 @@ class MainChannel extends Channel {
 				}
 				case 'mention': {
 					if (isInstanceMuted(data.body, new Set<string>(this.userProfile?.mutedInstances ?? []))) return;
-
-					if (this.userIdsWhoMeMuting.has(data.body.userId)) return;
+					if (!this.isNoteVisibleForMe(data.body)) return;
+					if (this.isNoteMutedOrBlocked(data.body)) return;
 					if (data.body.isHidden) {
 						const note = await this.noteEntityService.pack(data.body.id, this.user, {
 							detail: true,
+							skipLanguageCheck: true,
+							viewerDimension: null,
 						});
 
 						if (this.user && (note.visibleUserIds?.includes(this.user.id) ?? note.mentions?.includes(this.user.id))) {
@@ -69,6 +74,8 @@ class MainChannel extends Channel {
 
 			this.send(data.type, data.body);
 		});
+
+		return true;
 	}
 }
 
@@ -84,7 +91,7 @@ export class MainChannelService implements MiChannelService<true> {
 	}
 
 	@bindThis
-	public create(id: string, connection: Channel['connection']): MainChannel {
+	public create(id: string, connection: Channel['connection'], dimension?: number | null): MainChannel {
 		return new MainChannel(
 			this.noteEntityService,
 			id,

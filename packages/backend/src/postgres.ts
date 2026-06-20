@@ -42,6 +42,7 @@ import { MiModerationLog } from '@/models/ModerationLog.js';
 import { MiMuting } from '@/models/Muting.js';
 import { MiRenoteMuting } from '@/models/RenoteMuting.js';
 import { MiNote } from '@/models/Note.js';
+import { MiNoteLanguage } from '@/models/NoteLanguage.js';
 import { MiScheduledNote } from '@/models/ScheduledNote.js';
 import { MiNoteFavorite } from '@/models/NoteFavorite.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
@@ -63,6 +64,7 @@ import { MiUsedUsername } from '@/models/UsedUsername.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserIp } from '@/models/UserIp.js';
 import { MiUserKeypair } from '@/models/UserKeypair.js';
+import { MiUserLanguage } from '@/models/UserLanguage.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListFavorite } from '@/models/UserListFavorite.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
@@ -81,6 +83,7 @@ import { MiRoleAssignment } from '@/models/RoleAssignment.js';
 import { MiFlash } from '@/models/Flash.js';
 import { MiFlashLike } from '@/models/FlashLike.js';
 import { MiUserMemo } from '@/models/UserMemo.js';
+import { MiUserInlinePolicy } from '@/models/UserInlinePolicy.js';
 import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
@@ -196,6 +199,7 @@ export const entities = [
 	MiUser,
 	MiUserProfile,
 	MiUserKeypair,
+	MiUserLanguage,
 	MiUserPublickey,
 	MiUserList,
 	MiUserListFavorite,
@@ -210,6 +214,7 @@ export const entities = [
 	MiRenoteMuting,
 	MiBlocking,
 	MiNote,
+	MiNoteLanguage,
 	MiScheduledNote,
 	MiNoteFavorite,
 	MiNoteReaction,
@@ -256,6 +261,7 @@ export const entities = [
 	MiFlash,
 	MiFlashLike,
 	MiUserMemo,
+	MiUserInlinePolicy,
 	MiChatMessage,
 	MiChatRoom,
 	MiChatRoomMembership,

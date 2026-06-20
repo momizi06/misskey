@@ -16,13 +16,14 @@ import type {
 	DriveFilesRepository,
 	MiMeta,
 	UserProfilesRepository,
+	UserLanguagesRepository,
 	PagesRepository,
 } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { birthdaySchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import { normalizeForSearch } from '@/misc/normalize-for-search.js';
-import { langmap } from '@/misc/langmap.js';
+import { langmap, postingLangCodes } from '@/misc/langmap.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
@@ -43,6 +44,9 @@ import { notificationRecieveConfig } from '@/models/json-schema/user.js';
 import { ApiLoggerService } from '@/server/api/ApiLoggerService.js';
 import { ApiError } from '@/server/api/error.js';
 import { IdService } from '@/core/IdService.js';
+
+const languageCodes = Object.keys(langmap);
+const viewingLanguageCodes = [...postingLangCodes, 'unknown', 'remote'];
 
 export const meta = {
 	tags: ['account'],
@@ -165,7 +169,19 @@ export const paramDef = {
 		followedMessage: { ...followedMessageSchema, nullable: true },
 		location: { ...locationSchema, nullable: true },
 		birthday: { ...birthdaySchema, nullable: true },
-		lang: { type: 'string', enum: [null, ...Object.keys(langmap)] as string[], nullable: true },
+		lang: { type: 'string', enum: [null, ...languageCodes] as string[], nullable: true },
+		postingLang: { type: 'string', enum: [null, ...postingLangCodes] as string[], nullable: true },
+		viewingLangs: {
+			type: 'array',
+			minItems: 0,
+			uniqueItems: true,
+			items: {
+				type: 'string',
+				enum: viewingLanguageCodes as string[],
+			},
+		},
+		showMediaInAllLanguages: { type: 'boolean' },
+		showHashtagsInAllLanguages: { type: 'boolean' },
 		avatarId: { type: 'string', format: 'misskey:id', nullable: true },
 		avatarDecorations: {
 			type: 'array', maxItems: 16, items: {
@@ -298,6 +314,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private usersRepository: UsersRepository,
 		@Inject(DI.userProfilesRepository)
 		private userProfilesRepository: UserProfilesRepository,
+		@Inject(DI.userLanguagesRepository)
+		private userLanguagesRepository: UserLanguagesRepository,
 		@Inject(DI.driveFilesRepository)
 		private driveFilesRepository: DriveFilesRepository,
 		@Inject(DI.pagesRepository)
@@ -323,11 +341,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			const updates = {} as Partial<MiUser>;
 			const profileUpdates = {} as Partial<MiUserProfile>;
+			const languageUpdates: {
+				postingLang?: string | null;
+				viewingLangs?: string[];
+				showMediaInAllLanguages?: boolean;
+				showHashtagsInAllLanguages?: boolean;
+			} = {};
 			const policy = await this.roleService.getUserPolicies(user.id);
 
 			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
-			let policies: RolePolicies | null = null;
-
 			if (ps.name !== undefined) {
 				if (ps.name === null) {
 					updates.name = null;
@@ -339,6 +361,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (ps.description !== undefined) profileUpdates.description = ps.description;
 			if (ps.followedMessage !== undefined) profileUpdates.followedMessage = ps.followedMessage;
 			if (ps.lang !== undefined) profileUpdates.lang = ps.lang;
+			if (ps.postingLang !== undefined) languageUpdates.postingLang = ps.postingLang;
+			if (ps.viewingLangs !== undefined) languageUpdates.viewingLangs = ps.viewingLangs;
+			if (ps.showMediaInAllLanguages !== undefined) languageUpdates.showMediaInAllLanguages = ps.showMediaInAllLanguages;
+			if (ps.showHashtagsInAllLanguages !== undefined) languageUpdates.showHashtagsInAllLanguages = ps.showHashtagsInAllLanguages;
 			if (ps.location !== undefined) profileUpdates.location = ps.location;
 			if (ps.birthday !== undefined) profileUpdates.birthday = ps.birthday;
 			if (ps.followingVisibility !== undefined) profileUpdates.followingVisibility = ps.followingVisibility;
@@ -458,7 +484,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			if (ps.avatarDecorations) {
-				policies ??= await this.roleService.getUserPolicies(user.id);
 				const decorations = await this.avatarDecorationService.getAll(true);
 				const myRoles = await this.roleService.getUserRoles(user.id);
 				const allRoles = await this.roleService.getRoles();
@@ -586,6 +611,20 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				...profileUpdates,
 				verifiedLinks: [],
 			});
+
+			if (Object.keys(languageUpdates).length > 0) {
+				const existing = await this.userLanguagesRepository.findOneBy({ userId: user.id });
+				const next = {
+					userId: user.id,
+					postingLang: languageUpdates.postingLang ?? existing?.postingLang ?? null,
+					viewingLangs: languageUpdates.viewingLangs ?? existing?.viewingLangs ?? viewingLanguageCodes,
+					showMediaInAllLanguages: languageUpdates.showMediaInAllLanguages ?? existing?.showMediaInAllLanguages ?? true,
+					showHashtagsInAllLanguages: languageUpdates.showHashtagsInAllLanguages ?? existing?.showHashtagsInAllLanguages ?? true,
+				};
+
+				const saved = await this.userLanguagesRepository.save(next);
+				this.cacheService.userLanguageCache.set(user.id, saved);
+			}
 
 			const iObj = await this.userEntityService.pack(user.id, user, {
 				schema: 'MeDetailed',

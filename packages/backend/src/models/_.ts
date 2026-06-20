@@ -48,6 +48,7 @@ import { MiMeta } from '@/models/Meta.js';
 import { MiModerationLog } from '@/models/ModerationLog.js';
 import { MiMuting } from '@/models/Muting.js';
 import { MiNote } from '@/models/Note.js';
+import { MiNoteLanguage } from '@/models/NoteLanguage.js';
 import { MiScheduledNote } from '@/models/ScheduledNote.js';
 import { MiNoteFavorite } from '@/models/NoteFavorite.js';
 import { MiNoteReaction } from '@/models/NoteReaction.js';
@@ -76,6 +77,7 @@ import { MiUsedUsername } from '@/models/UsedUsername.js';
 import { MiUser } from '@/models/User.js';
 import { MiUserIp } from '@/models/UserIp.js';
 import { MiUserKeypair } from '@/models/UserKeypair.js';
+import { MiUserLanguage } from '@/models/UserLanguage.js';
 import { MiUserList } from '@/models/UserList.js';
 import { MiUserListFavorite } from '@/models/UserListFavorite.js';
 import { MiUserListMembership } from '@/models/UserListMembership.js';
@@ -85,6 +87,7 @@ import { MiUserProfile } from '@/models/UserProfile.js';
 import { MiUserPublickey } from '@/models/UserPublickey.js';
 import { MiUserSecurityKey } from '@/models/UserSecurityKey.js';
 import { MiUserMemo } from '@/models/UserMemo.js';
+import { MiUserInlinePolicy } from '@/models/UserInlinePolicy.js';
 import { MiUserAccountMoveLog } from '@/models/UserAccountMoveLog.js';
 import { MiWebhook } from '@/models/Webhook.js';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js';
@@ -132,6 +135,7 @@ export {
 	MiMuting,
 	MiRenoteMuting,
 	MiNote,
+	MiNoteLanguage,
 	MiScheduledNote,
 	MiNoteFavorite,
 	MiNoteReaction,
@@ -154,6 +158,7 @@ export {
 	MiUser,
 	MiUserIp,
 	MiUserKeypair,
+	MiUserLanguage,
 	MiUserList,
 	MiUserListFavorite,
 	MiUserListMembership,
@@ -171,6 +176,7 @@ export {
 	MiFlash,
 	MiFlashLike,
 	MiUserMemo,
+	MiUserInlinePolicy,
 	MiChatMessage,
 	MiChatRoom,
 	MiChatRoomMembership,
@@ -215,6 +221,7 @@ export type ModerationLogsRepository = Repository<MiModerationLog> & MiRepositor
 export type MutingsRepository = Repository<MiMuting> & MiRepository<MiMuting>;
 export type RenoteMutingsRepository = Repository<MiRenoteMuting> & MiRepository<MiRenoteMuting>;
 export type NotesRepository = Repository<MiNote> & MiRepository<MiNote>;
+export type NoteLanguagesRepository = Repository<MiNoteLanguage> & MiRepository<MiNoteLanguage>;
 export type ScheduledNotesRepository = Repository<MiScheduledNote>;
 export type NoteFavoritesRepository = Repository<MiNoteFavorite> & MiRepository<MiNoteFavorite>;
 export type NoteReactionsRepository = Repository<MiNoteReaction> & MiRepository<MiNoteReaction>;
@@ -237,6 +244,7 @@ export type UsedUsernamesRepository = Repository<MiUsedUsername> & MiRepository<
 export type UsersRepository = Repository<MiUser> & MiRepository<MiUser>;
 export type UserIpsRepository = Repository<MiUserIp> & MiRepository<MiUserIp>;
 export type UserKeypairsRepository = Repository<MiUserKeypair> & MiRepository<MiUserKeypair>;
+export type UserLanguagesRepository = Repository<MiUserLanguage> & MiRepository<MiUserLanguage>;
 export type UserListsRepository = Repository<MiUserList> & MiRepository<MiUserList>;
 export type UserListFavoritesRepository = Repository<MiUserListFavorite> & MiRepository<MiUserListFavorite>;
 export type UserListMembershipsRepository = Repository<MiUserListMembership> & MiRepository<MiUserListMembership>;
@@ -255,6 +263,7 @@ export type RoleAssignmentsRepository = Repository<MiRoleAssignment> & MiReposit
 export type FlashsRepository = Repository<MiFlash> & MiRepository<MiFlash>;
 export type FlashLikesRepository = Repository<MiFlashLike> & MiRepository<MiFlashLike>;
 export type UserMemoRepository = Repository<MiUserMemo> & MiRepository<MiUserMemo>;
+export type UserInlinePoliciesRepository = Repository<MiUserInlinePolicy> & MiRepository<MiUserInlinePolicy>;
 export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;
 export type ChatRoomsRepository = Repository<MiChatRoom> & MiRepository<MiChatRoom>;
 export type ChatRoomMembershipsRepository = Repository<MiChatRoomMembership> & MiRepository<MiChatRoomMembership>;

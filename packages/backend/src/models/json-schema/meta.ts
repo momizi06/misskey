@@ -45,6 +45,11 @@ export const packedMetaLiteSchema = {
 				optional: false, nullable: false,
 			},
 		},
+		dimensions: {
+			type: 'number',
+			optional: false, nullable: false,
+			minimum: 1,
+		},
 		tosUrl: {
 			type: 'string',
 			optional: false, nullable: true,
@@ -184,8 +189,16 @@ export const packedMetaLiteSchema = {
 						optional: false, nullable: false,
 						format: 'url',
 					},
+					imageBlurhash: {
+						type: 'string',
+						optional: false, nullable: true,
+					},
 					dayOfWeek: {
 						type: 'integer',
+						optional: false, nullable: false,
+					},
+					isSensitive: {
+						type: 'boolean',
 						optional: false, nullable: false,
 					},
 				},

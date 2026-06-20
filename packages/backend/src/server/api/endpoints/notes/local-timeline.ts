@@ -52,6 +52,7 @@ export const paramDef = {
 		allowPartial: { type: 'boolean', default: false }, // true is recommended but for compatibility false by default
 		sinceDate: { type: 'integer' },
 		untilDate: { type: 'integer' },
+		dimension: { type: 'integer', minimum: 0, nullable: true },
 	},
 	required: [],
 } as const;
@@ -75,7 +76,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
 			const sinceId = ps.sinceId ?? (ps.sinceDate ? this.idService.gen(ps.sinceDate!) : null);
-
+			const viewerDimension = ps.dimension ?? 0;
 			const policies = await this.roleService.getUserPolicies(me ? me.id : null);
 			if (!policies.ltlAvailable) {
 				throw new ApiError(meta.errors.ltlDisabled);
@@ -96,7 +97,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					}
 				});
 
-				return await this.noteEntityService.packMany(timeline, me);
+				return await this.noteEntityService.packMany(
+					timeline,
+					me,
+					{ viewerDimension },
+				);
 			}
 
 			let timelineConfig: FanoutTimelineName[];
@@ -116,6 +121,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				limit: ps.limit,
 				allowPartial: ps.allowPartial,
 				me,
+				viewerDimension,
 				useDbFallback: this.serverSettings.enableFanoutTimelineDbFallback,
 				redisTimelines: timelineConfig,
 				alwaysIncludeMyNotes: true,

@@ -9,10 +9,10 @@ import { promises as fsp } from 'fs';
 import locales from '../../locales/index.js';
 import meta from '../../package.json';
 import packageInfo from './package.json' with { type: 'json' };
-import pluginUnwindCssModuleClassName from './lib/rollup-plugin-unwind-css-module-class-name.js';
 import pluginJson5 from './vite.json5.js';
 import pluginCreateSearchIndex from './lib/vite-plugin-create-search-index.js';
 import type { Options as SearchIndexOptions } from './lib/vite-plugin-create-search-index.js';
+import { Features } from 'lightningcss';
 
 const url = process.env.NODE_ENV === 'development' ? yaml.load(await fsp.readFile('../../.config/default.yml', 'utf-8')).url : null;
 const host = url ? (new URL(url)).hostname : undefined;
@@ -92,7 +92,6 @@ export function getConfig(): UserConfig {
 		plugins: [
 			...searchIndexes.map(options => pluginCreateSearchIndex(options)),
 			pluginVue(),
-			pluginUnwindCssModuleClassName(),
 			pluginJson5(),
 			...process.env.NODE_ENV === 'production'
 				? [
@@ -119,6 +118,9 @@ export function getConfig(): UserConfig {
 		},
 
 		css: {
+			lightningcss: {
+				exclude: Features.LightDark,
+			},
 			modules: {
 				generateScopedName(name, filename, _css): string {
 					const id = (path.relative(__dirname, filename.split('?')[0]) + '-' + name).replace(/[\\\/\.\?&=]/g, '-').replace(/(src-|vue-)/g, '');
@@ -151,9 +153,9 @@ export function getConfig(): UserConfig {
 
 		build: {
 			target: [
-				'chrome116',
-				'firefox116',
-				'safari16',
+				'chrome130',
+				'firefox132',
+				'safari18.2',
 			],
 			manifest: 'manifest.json',
 			rollupOptions: {
@@ -169,6 +171,17 @@ export function getConfig(): UserConfig {
 					entryFileNames: `${meta.version}.[hash].js`,
 					chunkFileNames: `${meta.version}.[hash].js`,
 					assetFileNames: `${meta.version}.[hash][extname]`,
+					sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
+						const repoRoot = path.resolve(__dirname, '../..');
+						const absoluteSourcePath = path.isAbsolute(relativeSourcePath)
+							? relativeSourcePath
+							: path.resolve(path.dirname(sourcemapPath), relativeSourcePath);
+						const rootedPath = path.relative(repoRoot, absoluteSourcePath);
+
+						return rootedPath.startsWith('..')
+							? relativeSourcePath.replaceAll('\\', '/')
+							: rootedPath.replaceAll('\\', '/');
+					},
 					paths(id: string): string {
 						for (const p of externalPackages) {
 							if (p.match.test(id)) return p.path(id, p.match);
@@ -178,10 +191,11 @@ export function getConfig(): UserConfig {
 				},
 			},
 			cssCodeSplit: true,
+			cssMinify: 'lightningcss',
 			outDir: __dirname + '/../../built/_frontend_vite_',
 			assetsDir: '.',
 			emptyOutDir: false,
-			sourcemap: process.env.NODE_ENV === 'development',
+			sourcemap: true,
 			reportCompressedSize: false,
 		},
 

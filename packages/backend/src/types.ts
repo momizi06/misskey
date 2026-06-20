@@ -94,6 +94,7 @@ export const moderationLogTypes = [
 	'unsuspend',
 	'updateUserName',
 	'updateUserNote',
+	'updateInlinePolicies',
 	'addCustomEmoji',
 	'updateCustomEmoji',
 	'deleteCustomEmoji',
@@ -180,6 +181,13 @@ export type ModerationLogPayloads = {
 		userHost: string | null;
 		before: string | null;
 		after: string | null;
+	};
+	updateInlinePolicies: {
+		userId: string;
+		userUsername: string;
+		userHost: string | null;
+		before: any;
+		after: any;
 	};
 	addCustomEmoji: {
 		emojiId: string;
@@ -474,6 +482,7 @@ export type NoteCreateOption = {
 	files?: MiDriveFile[] | null;
 	poll?: IPoll | null;
 	localOnly?: boolean | null;
+	dimension?: number | null;
 	reactionAcceptance?: MiNote['reactionAcceptance'];
 	cw?: string | null;
 	visibility?: string;
@@ -485,6 +494,7 @@ export type NoteCreateOption = {
 	uri?: string | null;
 	url?: string | null;
 	app?: MiApp | null;
+	lang?: string | null;
 };
 
 export type Serialized<T> = {
@@ -507,3 +517,5 @@ export type FilterUnionByProperty<
 	Property extends string | number | symbol,
 	Condition,
 > = Union extends Record<Property, Condition> ? Union : never;
+
+export type Awaitable<T> = T | Promise<T>;

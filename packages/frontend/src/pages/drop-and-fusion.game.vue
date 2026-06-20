@@ -197,6 +197,7 @@ import * as Misskey from 'misskey-js';
 import { DropAndFusionGame } from 'misskey-bubble-game';
 import { useInterval } from '@@/js/use-interval.js';
 import { apiUrl } from '@@/js/config.js';
+import { generateClientTransactionId } from '@/utility/misskey-api.js';
 import type { Mono } from 'misskey-bubble-game';
 import { definePage } from '@/page.js';
 import MkRippleEffect from '@/components/MkRippleEffect.vue';
@@ -623,7 +624,7 @@ function loadMonoTextures() {
 		// Matter-js内にキャッシュがある場合はスキップ
 		if (renderer.textures[mono.img]) return;
 
-		let src = mono.img;
+		let src: string;
 
 		if (monoTextureUrls[mono.img]) {
 			src = monoTextureUrls[mono.img];
@@ -674,7 +675,7 @@ function tick() {
 }
 
 function tickReplay() {
-	let hasNextTick;
+	let hasNextTick = false;
 	for (let i = 0; i < replayPlaybackRate.value; i++) {
 		const log = logs!.find(x => x.frame === game.frame);
 		if (log) {
@@ -915,7 +916,9 @@ function getGameImageDriveFile() {
 					method: 'POST',
 					headers: {
 						'Authorization': `Bearer ${$i!.token}`,
+						'X-Client-Transaction-Id': generateClientTransactionId('bubble-game-share'),
 					},
+					credentials: 'include',
 					body: formData,
 				})
 					.then(response => response.json())
